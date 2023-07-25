@@ -30,7 +30,6 @@ namespace ERPSystem.Web.Controllers
             _tokenValidationParameters = tokenValidationParameters;
 
         }
-
         [HttpPost("signup")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromForm]RegisterDTO registerDto)

@@ -1,4 +1,7 @@
+using ERPSystem.BLL.Extensions;
+using ERPSystem.BLL.Services.LoggerManagerService;
 using ERPSystem.DataAccess;
+using ERPSystem.Web.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +15,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.RegisterServices();
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
@@ -91,6 +96,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+var logger = app.Services.GetRequiredService<ILoggerManager>();
+app.ConfigureExceptionHandler(logger);
 
 app.UseHttpsRedirection();
 
