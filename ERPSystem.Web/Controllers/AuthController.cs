@@ -1,6 +1,6 @@
 ﻿using ERPSystem.BLL.DTO.Auth;
 using ERPSystem.DataAccess;
-using ERPSystem.DataAccess.Entities;
+using ERPSystem.DataAccess.Entities.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +30,7 @@ namespace ERPSystem.Web.Controllers
             _tokenValidationParameters = tokenValidationParameters;
 
         }
+        //only for "admin" users
         [HttpPost("signup")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromForm]RegisterDTO registerDto)
@@ -42,9 +43,15 @@ namespace ERPSystem.Web.Controllers
             {
                 return Conflict("User already exists.");
             }
-            var newUser = new IdentityUser{ UserName = registerDto.Email, Email = registerDto.Email };
+            var newUser = new IdentityUser { UserName = registerDto.Email, Email = registerDto.Email };
             var result = await _userManager.CreateAsync(newUser, registerDto.Password);
-
+            var permissions = Enum.GetNames(typeof(ERPSystem.Resources.Permission));
+            var claims = new List<Claim>();
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim(ClaimTypes.AuthorizationDecision, permission));
+            }
+            await _userManager.AddClaimsAsync(newUser, claims);
             if (result.Succeeded)
             {
                 return Ok("User created successfully.");
@@ -77,7 +84,7 @@ namespace ERPSystem.Web.Controllers
             if (string.IsNullOrEmpty(refreshToken)) return BadRequest("Provide a valid refresh token.");
             var storedToken = await _context.RefreshTokens.FirstOrDefaultAsync(x => x.RefrToken == refreshToken);
             if (storedToken == null) return Unauthorized();
-            var dbUser = await _userManager.FindByIdAsync(storedToken.UserId);
+            var dbUser = await _userManager.FindByIdAsync(storedToken.IdentityUserId);
             try
             {
                 return Ok(await GenerateJWTTokenAsync(dbUser, storedToken));
@@ -104,11 +111,14 @@ namespace ERPSystem.Web.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var userRoles = await _userManager.GetRolesAsync(user);
-            foreach (var role in userRoles)
-            {
-                authClaims.Add(new Claim(ClaimTypes.Role, role));
-            }
+            //var userRoles = await _userManager.GetRolesAsync(user);
+            //foreach (var role in userRoles)
+            //{
+            //    authClaims.Add(new Claim(ClaimTypes.Role, role));
+            //}
+            var userClaims = await _userManager.GetClaimsAsync(user);
+            authClaims.AddRange(userClaims);
+
             var authSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_config["JWT:Secret"]));
             var token = new JwtSecurityToken(issuer: _config["JWT:Issuer"],
                 audience: _config["JWT:Audience"],
@@ -130,7 +140,7 @@ namespace ERPSystem.Web.Controllers
             {
                 JwtId = token.Id,
                 IsRevoked = false,
-                UserId = user.Id,
+                IdentityUserId = user.Id,
                 DateAdded = DateTime.UtcNow,
                 DateExpired = DateTime.UtcNow.AddMonths(6),
                 RefrToken = Guid.NewGuid().ToString() + "-" + Guid.NewGuid().ToString(),

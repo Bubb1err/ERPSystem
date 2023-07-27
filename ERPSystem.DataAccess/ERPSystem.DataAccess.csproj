@@ -11,4 +11,14 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="EntityTypeConfiguration\" />
+    <Folder Include="Repositories\Implementations\" />
+    <Folder Include="Repositories\Interfaces\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ERPSystem.Resources\ERPSystem.Resources.csproj" />
+  </ItemGroup>
+
 </Project>

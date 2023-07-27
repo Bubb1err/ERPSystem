@@ -1,8 +1,11 @@
 using ERPSystem.BLL.Extensions;
 using ERPSystem.BLL.Services.LoggerManagerService;
 using ERPSystem.DataAccess;
+using ERPSystem.DataAccess.Entities.Auth;
+using ERPSystem.Web.AuthorizationHandling;
 using ERPSystem.Web.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -17,6 +20,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.RegisterServices();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

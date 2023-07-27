@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ERPSystem.BLL\ERPSystem.BLL.csproj" />
     <ProjectReference Include="..\ERPSystem.DataAccess\ERPSystem.DataAccess.csproj" />
+    <ProjectReference Include="..\ERPSystem.Resources\ERPSystem.Resources.csproj" />
   </ItemGroup>
 
 </Project>
