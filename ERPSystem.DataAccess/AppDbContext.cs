@@ -1,5 +1,4 @@
 ﻿using ERPSystem.DataAccess.Entities.Auth;
-using ERPSystem.DataAccess.Entities.Profiles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;

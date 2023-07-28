@@ -2,6 +2,8 @@ using ERPSystem.BLL.Extensions;
 using ERPSystem.BLL.Services.LoggerManagerService;
 using ERPSystem.DataAccess;
 using ERPSystem.DataAccess.Entities.Auth;
+using ERPSystem.DataAccess.Repositories.Implementations;
+using ERPSystem.DataAccess.Repositories.Interfaces;
 using ERPSystem.Web.AuthorizationHandling;
 using ERPSystem.Web.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,7 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")))
+    .AddUnitOfWork<AppDbContext>();
 
 builder.Services.RegisterServices();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();

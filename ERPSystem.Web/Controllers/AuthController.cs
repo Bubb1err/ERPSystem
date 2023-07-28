@@ -1,6 +1,8 @@
 ﻿using ERPSystem.BLL.DTO.Auth;
 using ERPSystem.DataAccess;
 using ERPSystem.DataAccess.Entities.Auth;
+using ERPSystem.DataAccess.Repositories.Implementations;
+using ERPSystem.DataAccess.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,13 +24,13 @@ namespace ERPSystem.Web.Controllers
         public AuthController(UserManager<IdentityUser> userManager,
             IConfiguration config, 
             AppDbContext context, 
-            TokenValidationParameters tokenValidationParameters)
+            TokenValidationParameters tokenValidationParameters
+            )
         {
             _userManager = userManager;
             _config = config;
             _context = context;
             _tokenValidationParameters = tokenValidationParameters;
-
         }
         //only for "admin" users
         [HttpPost("signup")]
