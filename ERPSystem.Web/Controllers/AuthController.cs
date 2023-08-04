@@ -1,62 +1,51 @@
-﻿using ERPSystem.BLL.DTO.Auth;
-using ERPSystem.DataAccess;
+﻿using ERPSystem.BLL.Commands.UserCommands;
+using ERPSystem.BLL.DTO.Auth;
 using ERPSystem.DataAccess.Entities.Auth;
-using ERPSystem.DataAccess.Repositories.Implementations;
+using ERPSystem.DataAccess.Entities.UserEntities;
 using ERPSystem.DataAccess.Repositories.Interfaces;
+using ERPSystem.DataAccess.Repositories.Interfaces.Auth;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace ERPSystem.Web.Controllers
 {
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly IConfiguration _config;
-        private readonly AppDbContext _context;
-        private readonly TokenValidationParameters _tokenValidationParameters;
-        public AuthController(UserManager<IdentityUser> userManager,
-            IConfiguration config, 
-            AppDbContext context, 
-            TokenValidationParameters tokenValidationParameters
-            )
+        private readonly UserManager<User> _userManager;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly IMediator _mediator;
+        private readonly ERPSystem.BLL.Services.AuthService.IAuthenticationService _authenticationService;
+        public AuthController(UserManager<User> userManager,
+            IMediator mediator,
+            ERPSystem.BLL.Services.AuthService.IAuthenticationService authenticationService,
+            IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
-            _config = config;
-            _context = context;
-            _tokenValidationParameters = tokenValidationParameters;
+            _mediator = mediator;
+            _authenticationService = authenticationService;
+            _unitOfWork = unitOfWork;
+            _refreshTokenRepository = _unitOfWork.GetRepository<RefreshToken, IRefreshTokenRepository>(hasCustomRepository: true);
+
         }
         //only for "admin" users
         [HttpPost("signup")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromForm]RegisterDTO registerDto)
+        public async Task<IActionResult> Register([FromForm]AdminRegisterDTO registerDto)
         {
             if(registerDto.Password != registerDto.ConfirmPassword) return BadRequest("Passwords mismatch.");
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var user = await _userManager.FindByEmailAsync(registerDto.Email);
-            if (user != null)
+            var adminRegisterCommand = new AdminRegisterCommand(registerDto);
+            var result = await _mediator.Send(adminRegisterCommand);
+
+            if (result.StatusCode == System.Net.HttpStatusCode.OK)
             {
-                return Conflict("User already exists.");
-            }
-            var newUser = new IdentityUser { UserName = registerDto.Email, Email = registerDto.Email };
-            var result = await _userManager.CreateAsync(newUser, registerDto.Password);
-            var permissions = Enum.GetNames(typeof(ERPSystem.Resources.Permission));
-            var claims = new List<Claim>();
-            foreach (var permission in permissions)
-            {
-                claims.Add(new Claim(ClaimTypes.AuthorizationDecision, permission));
-            }
-            await _userManager.AddClaimsAsync(newUser, claims);
-            if (result.Succeeded)
-            {
-                return Ok("User created successfully.");
+                return Ok(result);
             }
             else
             {
@@ -70,7 +59,7 @@ namespace ERPSystem.Web.Controllers
             var userExist = await _userManager.FindByEmailAsync(loginDto.Email);
             if (userExist != null && await _userManager.CheckPasswordAsync(userExist, loginDto.Password))
             {
-                var token = await GenerateJWTTokenAsync(userExist, null);
+                var token = await _authenticationService.GenerateJWTTokenAsync(userExist, null);
                 return Ok(token);
             }
             if (userExist == null) return RedirectToAction(nameof(Register));
@@ -84,78 +73,24 @@ namespace ERPSystem.Web.Controllers
         public async Task<IActionResult> RefreshToken(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken)) return BadRequest("Provide a valid refresh token.");
-            var storedToken = await _context.RefreshTokens.FirstOrDefaultAsync(x => x.RefrToken == refreshToken);
+            var storedToken = await _refreshTokenRepository.GetFirstOrDefaultAsync(x => x.RefrToken == refreshToken);
             if (storedToken == null) return Unauthorized();
             var dbUser = await _userManager.FindByIdAsync(storedToken.IdentityUserId);
             try
             {
-                return Ok(await GenerateJWTTokenAsync(dbUser, storedToken));
+                return Ok(await _authenticationService.GenerateJWTTokenAsync(dbUser, storedToken));
             }
             catch (SecurityTokenExpiredException)
             {
                 if (storedToken.DateExpired >= DateTime.UtcNow)
                 {
-                    return Ok(await GenerateJWTTokenAsync(dbUser, storedToken));
+                    return Ok(await _authenticationService.GenerateJWTTokenAsync(dbUser, storedToken));
                 }
                 else
                 {
-                    return Ok(await GenerateJWTTokenAsync(dbUser, null));
+                    return Ok(await _authenticationService.GenerateJWTTokenAsync(dbUser, null));
                 }
             }
-        }
-        private async Task<AuthResultDTO> GenerateJWTTokenAsync(IdentityUser user, RefreshToken rToken)
-        {
-            var authClaims = new List<Claim>()
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            //var userRoles = await _userManager.GetRolesAsync(user);
-            //foreach (var role in userRoles)
-            //{
-            //    authClaims.Add(new Claim(ClaimTypes.Role, role));
-            //}
-            var userClaims = await _userManager.GetClaimsAsync(user);
-            authClaims.AddRange(userClaims);
-
-            var authSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_config["JWT:Secret"]));
-            var token = new JwtSecurityToken(issuer: _config["JWT:Issuer"],
-                audience: _config["JWT:Audience"],
-                expires: DateTime.UtcNow.AddMinutes(5),
-                claims: authClaims,
-                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
-            var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
-            if (rToken != null)
-            {
-                var rTokenResponse = new AuthResultDTO()
-                {
-                    Token = jwtToken,
-                    RefreshToken = rToken.RefrToken,
-                    ExpiresAt = token.ValidTo
-                };
-                return rTokenResponse;
-            }
-            var refreshToken = new RefreshToken()
-            {
-                JwtId = token.Id,
-                IsRevoked = false,
-                IdentityUserId = user.Id,
-                DateAdded = DateTime.UtcNow,
-                DateExpired = DateTime.UtcNow.AddMonths(6),
-                RefrToken = Guid.NewGuid().ToString() + "-" + Guid.NewGuid().ToString(),
-            };
-            await _context.RefreshTokens.AddAsync(refreshToken);
-            await _context.SaveChangesAsync();
-            var result = new AuthResultDTO()
-            {
-                Token = jwtToken,
-                RefreshToken = refreshToken.RefrToken,
-                ExpiresAt = token.ValidTo
-            };
-            return result;
         }
     }
 }

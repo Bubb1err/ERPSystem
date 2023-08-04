@@ -42,6 +42,33 @@ namespace ERPSystem.DataAccess.Repositories.Implementations
             return (IGenericRepository<TEntity>)_repositories[type];
         }
 
+        public IRepository GetRepository<TEntity, IRepository>(bool hasCustomRepository = false) 
+            where TEntity : class
+            where IRepository : class, IGenericRepository<TEntity>
+        {
+            if (_repositories == null)
+            {
+                _repositories = new Dictionary<Type, object>();
+            }
+
+            if (hasCustomRepository)
+            {
+                var customRepo = DbContext.GetService<IRepository>();
+                if (customRepo != null)
+                {
+                    return customRepo;
+                }
+            }
+
+            var type = typeof(TEntity);
+            if (!_repositories.ContainsKey(type))
+            {
+                _repositories[type] = new GenericRepository<TEntity>(DbContext);
+            }
+
+            return (IRepository)_repositories[type];
+        }
+
         public int SaveChanges(bool ensureAutoHistory = false)
         {
             return DbContext.SaveChanges();

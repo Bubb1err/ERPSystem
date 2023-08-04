@@ -1,7 +1,7 @@
 ﻿
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Identity;
+using ERPSystem.DataAccess.Entities.UserEntities;
 
 namespace ERPSystem.DataAccess.Entities.Auth
 {
@@ -16,6 +16,6 @@ namespace ERPSystem.DataAccess.Entities.Auth
         public DateTime DateExpired { get; set; }
         public string IdentityUserId { get; set; }
         [ForeignKey(nameof(IdentityUserId))]
-        public IdentityUser IdentityUser { get; set; }
+        public User User { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace ERPSystem.BLL.DTO.Auth
 {
-    public class RegisterDTO
+    public class AdminRegisterDTO
     {
         [EmailAddress]
         [Required]
@@ -11,5 +11,8 @@ namespace ERPSystem.BLL.DTO.Auth
         public string Password { get; set; }
         [Required]
         public string ConfirmPassword { get; set; }
+        [Required]
+        [MinLength(1)]
+        public string CompanyName { get; set; }
     }
 }

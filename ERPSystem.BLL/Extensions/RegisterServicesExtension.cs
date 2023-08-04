@@ -1,4 +1,5 @@
 ﻿
+using ERPSystem.BLL.Services.AuthService;
 using ERPSystem.BLL.Services.LoggerManagerService;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,6 +10,7 @@ namespace ERPSystem.BLL.Extensions
         public static void RegisterServices(this IServiceCollection services)
         {
             services.AddSingleton<ILoggerManager, LoggerManager>();
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
         }
     }
 }

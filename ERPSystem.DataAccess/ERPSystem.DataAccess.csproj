@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="EntityTypeConfiguration\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\ERPSystem.Resources\ERPSystem.Resources.csproj" />
   </ItemGroup>
 

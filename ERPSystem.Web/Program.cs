@@ -1,9 +1,14 @@
+using ERPSystem.BLL;
+using ERPSystem.BLL.DTO.Auth;
 using ERPSystem.BLL.Extensions;
 using ERPSystem.BLL.Services.LoggerManagerService;
 using ERPSystem.DataAccess;
 using ERPSystem.DataAccess.Entities.Auth;
-using ERPSystem.DataAccess.Repositories.Implementations;
-using ERPSystem.DataAccess.Repositories.Interfaces;
+using ERPSystem.DataAccess.Entities.UserEntities;
+using ERPSystem.DataAccess.Repositories.Implementations.Auth;
+using ERPSystem.DataAccess.Repositories.Implementations.UserRelatedRepositories;
+using ERPSystem.DataAccess.Repositories.Interfaces.Auth;
+using ERPSystem.DataAccess.Repositories.Interfaces.UserRelatedRepositories;
 using ERPSystem.Web.AuthorizationHandling;
 using ERPSystem.Web.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -20,12 +25,16 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")))
-    .AddUnitOfWork<AppDbContext>();
+    .AddUnitOfWork<AppDbContext>()
+    .AddRepository<RefreshToken, IRefreshTokenRepository, RefreshTokenRepository>()
+    .AddRepository<Company, ICompanyRepository, CompanyRepository>();
 
+builder.Services.AddAutoMapper(typeof(Program).Assembly, typeof(RegisterAdminResultDto).Assembly);
+builder.Services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(MediatrEntryPoint).Assembly));
 builder.Services.RegisterServices();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedEmail = false; //later change to true
 })
