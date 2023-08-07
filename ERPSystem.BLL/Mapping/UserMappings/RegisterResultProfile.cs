@@ -14,6 +14,7 @@ namespace ERPSystem.BLL.Mapping.UserMappings
                m => m.MapFrom(u => u.Email))
                .ForMember(x => x.UserId,
                m => m.MapFrom(u => u.Id));
+            CreateMap<User, EmployeeRegisterResultDTO>();
         }
 
     }

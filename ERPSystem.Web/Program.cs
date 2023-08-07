@@ -27,7 +27,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")))
     .AddUnitOfWork<AppDbContext>()
     .AddRepository<RefreshToken, IRefreshTokenRepository, RefreshTokenRepository>()
-    .AddRepository<Company, ICompanyRepository, CompanyRepository>();
+    .AddRepository<Company, ICompanyRepository, CompanyRepository>()
+    .AddRepository<User, IUserRepository, UserRepository>()
+    .AddRepository<UserProfile, IUserProfileRepository, UserProfileRepository>();
 
 builder.Services.AddAutoMapper(typeof(Program).Assembly, typeof(RegisterAdminResultDto).Assembly);
 builder.Services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(MediatrEntryPoint).Assembly));
